@@ -1,0 +1,81 @@
+（1）扩展逻辑卷
+#创建逻辑卷
+pvcreate /dev/sdｍ１
+#扩容卷组
+vgextend vg_data　/dev/sdｍ1
+#查看卷组剩余空间
+#vgs
+#扩容逻辑卷
+lvextend -l 100%free /dev/mapper/vg_data-lv_data
+#让文件系统与逻辑卷一样大
+xfs类型：xfs_growfs /met/data01
+ext类型：resize2fs /dev/mapper/vg_data-lv_data
+（2）压缩逻辑卷
+注：压缩过程中逻辑卷空间若小于文件系统空间，文件系统则会崩溃
+#卸载挂载点
+umount /data01
+#检测设备整体 ，降低压缩报错率
+fsck /dev/mapper/vg_data-lv_data
+#压缩
+resize2fs /dev/mapper/vg_data-lv_data 500M
+#压缩逻辑卷至500G
+lvresize -L 500G /dev/mapper/vg_data-lv_data
+#挂载
+mount -a
+（3）文件系统修复 
+#确认报错磁盘 
+dmesg |grep error 
+#查看报错磁盘对应的挂载目录 
+ll /dev/mapper/ 
+#确认文件系统格式 
+cat /etc/fstab 
+#操作前需卸载对应的挂载目录
+umount /tmp
+#修复文件系统 
+xfs格式：xfs_repair /dev/mapper/eulervg-tmp 
+注：-L参数存在数据丢失的风险，默认修复不带该参数，如果修复失败可使用-L参数尝试修复，操作前需获得客户授权
+ext格式：fsck.ext4 /dev/sda3 -yf
+（4）救援模式恢复至正常系统
+#检查文件系统是否正常 
+dmesg |grep error
+#若文件系统存在逻辑坏道，则执行（1）中的内容进行文件系统修复
+#若是物理数据盘存在故障导致，则注释报错挂载点
+vim /etc/fstab
+#重启系统
+reboot
+（5）软raid修复移除以及添加新磁盘
+#查看阵列情况，找到对应坏盘
+mdadm -D /dev/md127
+#更换硬盘时先卸载挂载目录，防止踢盘时出现busy
+umount /data01
+#卸载坏盘（操作前需观察坏盘是否已卸载，若未卸载则执行该操作，反之）
+mdadm /dev/md0 -f /dev/sdb -r /dev/sdb
+#检查是否成功剔除坏节点
+mdadm -D /dev/md127
+#重新添加新盘到磁盘阵列
+mdadm /dev/md127 -a /dev/sdf1
+（6)逻辑卷挂载异常
+# 查看pv信息里是否存在unknown的磁盘（存在则进行一下操作，反之）
+pvs
+#备份卷组信息
+cd /etc/lvm/backup/
+vgcfgbackup vg_data
+#卸载故障磁盘
+vgreduce --removemissing vg_data
+注：如果失败可尝试强制模式，增加参数--force
+#利用备份文件进行恢复，新增一块磁盘，保持原磁盘uuid信息（因逻辑卷不具备冗余，不一定能成功恢复）。
+pvcreate /dev/sdd1 -u WPjVlD-49Up-XuNy-yDMs-gixt-lFDZ-ywP8Wu --restorefile /etc/lvm/backup/vg_data
+#成功恢复则检查lvs,vgs配置信息，使最新卷组配置信息生效并挂载
+vgchange -ay vg_data
+mount -a
+#pvcreate 指认创建过程中若失败，检查发现卷组信息正常，lvs无相关data卷配置。/etc/lvm/backup/vg_data内容缺失。可判定为卷信息丢失，按正常创建卷/扩容的方式处理
+#创建逻辑卷
+pvcreate /dev/sdｍ１
+#扩容卷组
+vgextend vg_data　/dev/sdｍ1
+#扩容逻辑卷
+lvextend -l 100%free /dev/mapper/vg_data-lv_data
+格式化逻辑卷
+mkfs.xfs /dev/mapper/vg_data-lv_data
+#挂载目录，与原卷信息保持一直
+mount -a
