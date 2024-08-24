@@ -1,0 +1,30 @@
+标准化操作步骤
+1、将配置文件备份
+# cp /etc/sysconfig/iptables* /tmp/iptables.bak/  
+保存规则
+# iptables-save > /etc/sysconfig/iptables.rules
+查看规则
+# iptables -nL
+定义新的自定义链
+# iptables -N ComGroup  
+注：ComGroup为自定义链名
+允许将自定义链进入INPUT链
+# iptables -I INPUT 1  -j ComGroup
+2、添加、删除规则
+例如:
+（1）、允许指定机器进站通过本地22端口进入
+# iptables -I INPUT -s IP地址/32 -j ACCEPT
+# iptables -I INPUT -s IP地址/32 -p tcp --dport 22 -j  ACCEPT
+（2）、允许某网段以tcp协议通过80端口进入本服务器
+# iptables -I INPUT -s 网段/24 -p tcp --dport 80 -j ACCEPT 
+（3）、拒绝某网段以tcp协议通过80端口进入本服务器
+# iptables -I INPUT -s 网段/24 -p tcp --dport 80 -j DROP 
+（4）、增加网段通过服务器443，6004等多端口访问服务器
+# iptables -I INPUT -s 10.230.79.0/16 -p tcp  -m multiport --dport 443,6004 -j ACCEPT 
+（5）、放通主机侧堡垒机10.230.47.211的22端口
+# iptables -A ComGroup -p tcp -m iprange --src-range 110.230.47.211 -m multiport --dports 22 -j ACCEPT
+# iptables -A ComGroup -p tcp -m iprange --src-range 10.230.47.211 -m multiport -j ACCEPT
+（6）、保存配置
+# iptables-save > /etc/sysconfig/iptables.rules2023
+3、回退
+# iptables-restore < /etc/sysconfig/iptables.relus
