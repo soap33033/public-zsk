@@ -1,0 +1,69 @@
+服务端配置
+1.安装nfs-utils和rpcbind
+# yum install nfs-utils rpcbind
+
+2.设置开机启动服务
+# chkconfig nfs on
+# chkconfig rpcbind on
+
+3.启动相关服务
+# service rpcbind start
+# service nfs start
+
+4.创建共享目录
+# mkdir -p /export/data
+
+5.编辑/etc/exports主配置文件添加如下内容
+# vi /etc/exports
+==>/export/data    *(rw,async,no_root_squash,no_subtree_check)
+# exportfs -rv　　//重新读取配置文件，而不中断服务
+
+解读: 
+*可以共享给指定IP（192.168.1.7），也可以共享给指定网段（192.168.1.0），还可以共享给所有IP（*）.rw代表读写权限。
+ro只读权限
+rw读写权限
+sync同步写入内存与磁盘当中
+no_all_squash保留共享文件的UID和GID（默认）
+no_root_squash使得root用户具有根目录的完全访问权限
+
+6.启动nfs和rpcbind ,加入开机自启动：
+# systemctl start rpcbind
+# systemctl start nfs
+# systemctl enable rpcbind
+# systemctl enable nfs
+
+7.刷新配置立即生效
+# exportfs -a
+
+8、查看本机共享的服务 
+# showmount -e 
+
+客户端配置
+1. 安装nfs-utils
+# yum install nfs-utils 
+
+2.设置开机启动服务
+# chkconfig nfs on
+
+3.启动服务
+# service nfs start
+
+4.创建挂载点
+# mkdir -p /mnt/data
+
+5.挂载目录
+# mount -t nfs server_ip:/export/data /mnt/data
+
+6.查看挂载的目录
+# df -h
+
+7.卸载挂载的目录
+# umount /mnt/data
+
+8.编辑/etc/fstab，开机自动挂载
+# vi /etc/fstab
+==>server_ip:/export/data /mnt/data nfs rw,tcp,intr 0 1
+
+客户端回退：
+#umount /mnt/data
+#yum remove nfs-utils
