@@ -1,0 +1,21 @@
+文件来更改内核参数（系统所有进程一共可以打开的文件数量，即系统当前最大的文件句柄数，属于系统级别的限制，默认值大小通常与系统物理内存有关。注意：ulimit的open file值（默认1024）是单个进程可以打开的最大文件数，在高并发业务下，这个2个值都需要进行调整。
+）
+说明：
+soft：表示默认配置，不能超过 hard 设置的值
+hard：表示设置的最大值
+nproc ：单个用户可用的最大进程数量
+nofile ：可打开的文件描述符的最大数(超过会报错)
+stack：表示最大堆栈大小
+memlock：最大锁定内存地址空间（KB）(超过会警告)
+
+vim /etc/security/limits.conf
+*   soft    nproc   655360 
+*   hard    nproc   655360
+*   soft    nofile  655360
+*   hard    nofile  655360
+*   soft    stack   655360
+*   hard    stack   655360
+*   soft    memlock 734003200
+*   hard    memlock 734003200 
+
+说明:修改limits.conf文件后,退出当前用户,重新登录系统即可生效。
