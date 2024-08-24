@@ -1,0 +1,79 @@
+步骤 1：启用 bash 历史命令记录
+在 bash 中，用户执行的所有命令都会被保存到 .bash_history 文件中。如果需要更详细的信息，例如执行时间和用户，还可以调整 bash 的配置。
+
+修改 /etc/profile 或用户的 .bashrc
+将以下内容添加到 /etc/profile 或每个用户的 .bashrc 中，以启用时间戳和用户信息记录：
+
+bash
+# 启用历史记录的时间戳
+export HISTTIMEFORMAT="%F %T "
+# 保留更多的历史命令
+export HISTSIZE=10000
+export HISTFILESIZE=20000
+# 立即记录命令
+export PROMPT_COMMAND='history -a'
+这样，所有命令会被记录带时间戳，并且在命令执行后立即保存到历史文件中。
+
+步骤 2：设置命令审计和收集机制
+接下来，可以使用自动化脚本来定期检查 .bash_history 或者更复杂的审计工具（如 auditd），收集并审计用户执行的命令。
+
+使用 auditd 进行审计
+auditd 是 Linux 下的审计工具，可以对用户的系统活动（包括命令执行）进行详细审计。
+
+安装 auditd：
+
+bash
+sudo apt install auditd audispd-plugins
+配置审计规则： 编辑审计规则文件 /etc/audit/audit.rules，添加以下规则以审计所有用户的命令：
+
+bash
+# 记录用户执行的命令
+-a always,exit -F arch=b64 -S execve -k user_commands
+查看审计日志： 使用 ausearch 和 auditctl 可以过滤和查看审计日志，例如：
+
+bash
+ausearch -k user_commands
+过滤违规命令： 通过编写脚本，过滤出包含敏感或违规命令的记录。例如：
+
+bash
+ausearch -k user_commands | grep -E "(rm -rf|shutdown|reboot|unauthorized_command)"
+步骤 3：编写自动化收集脚本
+可以编写一个简单的脚本定期审计和收集可疑命令，并生成报告。
+
+自动收集违规命令的脚本
+bash
+#!/bin/bash
+
+# 定义违规命令的关键词
+declare -a forbidden_cmds=("rm -rf" "shutdown" "reboot" "unauthorized_command")
+
+# 日志审计文件路径
+AUDIT_LOG="/var/log/audit/audit.log"
+REPORT_FILE="/var/log/command_audit_report.txt"
+
+# 处理审计日志并筛选出违规命令
+echo "用户违规命令审计报告 - $(date)" > "$REPORT_FILE"
+for cmd in "${forbidden_cmds[@]}"; do
+    echo "审计：$cmd" >> "$REPORT_FILE"
+    ausearch -k user_commands | grep "$cmd" >> "$REPORT_FILE"
+done
+
+echo "审计完成，报告生成于 $REPORT_FILE"
+步骤 4：定期执行
+可以通过 cron 定期执行上述脚本以收集和审计用户执行的命令：
+
+0 * * * * /path/to/command_audit.sh
+
+
+使用 alias 或 wrapper 禁止特定命令
+可以通过在用户的 .bashrc 文件中使用 alias 命令来重定义或禁用某些命令。
+
+在每个用户的 .bashrc 文件中添加以下内容：
+
+bash
+复制代码
+# 禁止用户执行 `rm -rf` 命令
+alias rm='echo "此命令已被禁用"'
+
+# 禁止用户执行 `shutdown` 命令
+alias shutdown='echo "此命令已被禁用"'
