@@ -1,0 +1,12 @@
+密码破解: 例如:centos7
+(1)、对于使用grub引导的linux系统。在开机自检后，出现grub引导界面时，按E键进入编辑模式
+(2)、将LANG=/bin/bash 改成： init=/bin/bash 或者 rd.break
+(3)按ctrl+X
+(4)输入：
+# mount -o,remount
+或者：
+# mount -o remount,rw /sysroot/
+# chroot /sysroot/
+(5)、# echo 密码 | passwd --stdin 用户
+(6)、# >./autorelabel
+(7)、# exec /sbin/init
